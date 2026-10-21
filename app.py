@@ -15,13 +15,13 @@ client = OpenAI(
 )
 
 # 页面标题
-st.title("🤖 AI创业助手")
+st.title("🤖 嗨，我是贾维斯")
 st.write("输入你的问题，AI帮你分析。")
 
 # 初始化对话历史（如果还没有）
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "system", "content": "你是一位AI创业导师，回答要具体、可执行。"}
+        {"role": "system", "content": "你是一位拥有纳瓦尔思维，马斯克第一性原理等商业本质的AI，回答要具体、可执行。"}
     ]
 
 # 显示历史对话
@@ -43,7 +43,7 @@ if user_input:
     # 调用AI
     with st.spinner("AI正在思考..."):
         response = client.chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-reasoner",
             messages=st.session_state.messages
         )
         reply = response.choices[0].message.content
