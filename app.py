@@ -4,13 +4,20 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 # 加载密钥
-load_dotenv()
-api_key = os.getenv("DEEPSEEK_API_KEY")
+import streamlit as st
 
-client = OpenAI(
-    api_key=api_key,
-    base_url="https://api.deepseek.com"
-)
+# 兼容本地和云端：优先从 st.secrets 读，如果读不到再用 os.getenv
+try:
+    api_key = st.secrets["DEEPSEEK_API_KEY"]
+except (KeyError, FileNotFoundError):
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+    api_key = os.getenv("DEEPSEEK_API_KEY")
+
+if not api_key:
+    st.error("未找到 API Key，请检查本地 .env 文件或云端 Secrets 配置。")
+    st.stop()
 
 # 页面配置
 st.set_page_config(page_title="AI 金牌讲师", page_icon="👨‍🏫")
