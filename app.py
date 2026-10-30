@@ -3,27 +3,43 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# 加载密钥
-import streamlit as st
-# 兼容本地和云端：优先从 st.secrets 读，如果读不到再用 os.getenv
-try:
-    api_key = st.secrets["DEEPSEEK_API_KEY"]
-except (KeyError, FileNotFoundError):
-    import os
-    from dotenv import load_dotenv
-    load_dotenv()
-    api_key = os.getenv("DEEPSEEK_API_KEY")
-
-if not api_key:
-    st.error("未找到 API Key，请检查本地 .env 文件或云端 Secrets 配置。")
-    st.stop()
-
-# 页面配置
+# ==========================================
+# 1. 配置页面 (必须在最前面)
+# ==========================================
 st.set_page_config(page_title="AI 金牌讲师", page_icon="👨‍🏫")
+
+# ==========================================
+# 2. 安全读取密钥（兼容本地 .env 和云端 Secrets）
+# ==========================================
+load_dotenv()  # 尝试读取本地 .env
+api_key = os.getenv("DEEPSEEK_API_KEY")
+
+# 如果本地没有，去云端 Secrets 找
+if not api_key:
+    try:
+        api_key = st.secrets["DEEPSEEK_API_KEY"]
+    except Exception:
+        pass
+
+# 如果都找不到，直接拦截报错
+if not api_key:
+    st.error("❌ 未找到 DEEPSEEK_API_KEY，请检查本地 .env 文件或云端 Secrets 配置。")
+    st.stop()  # 停止运行后续代码
+
+# ==========================================
+# 3. 初始化客户端 (拿到 key 后立刻初始化)
+# ==========================================
+client = OpenAI(
+    api_key=api_key,
+    base_url="https://api.deepseek.com"
+)
+
+# ==========================================
+# 4. 页面标题与角色设定
+# ==========================================
 st.title("👨‍🏫 AI 金牌讲师：代码拆解助手")
 st.write("把你不懂的代码粘贴到下面，我用最通俗的方式给你讲明白。")
 
-# 核心：你的专属 System Prompt
 SYSTEM_PROMPT = """
 你是一位专业且讲解通俗易懂的代码培训机构的金牌讲师。
 你的任务是对用户发来的代码进行深入浅出的详细解释。
@@ -36,13 +52,17 @@ SYSTEM_PROMPT = """
 要求：语气耐心，拒绝堆砌术语，多用比喻。
 """
 
-# 初始化对话状态
+# ==========================================
+# 5. 初始化对话状态
+# ==========================================
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "system", "content": SYSTEM_PROMPT}
     ]
 
-# 侧边栏：清空对话功能
+# ==========================================
+# 6. 侧边栏：清空对话
+# ==========================================
 with st.sidebar:
     st.header("操作面板")
     if st.button("🗑️ 清空对话"):
@@ -51,32 +71,39 @@ with st.sidebar:
         ]
         st.rerun()
 
-# 渲染历史对话
+# ==========================================
+# 7. 渲染历史对话
+# ==========================================
 for msg in st.session_state.messages:
     if msg["role"] != "system":
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-# 用户输入区 (把提示词改成专门针对代码的)
+# ==========================================
+# 8. 用户输入与主逻辑
+# ==========================================
 if user_input := st.chat_input("请把你需要解释的代码粘贴到这里..."):
     
-    # 1. 显示用户输入
+    # 显示用户输入 (用代码块包裹)
     with st.chat_message("user"):
-        st.markdown(f"```python\n{user_input}\n```") # 用代码块包裹，防止格式乱
+        st.markdown(f"```python\n{user_input}\n```")
+    
+    # 将用户输入加入历史
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # 2. 调用大模型
+    # 调用大模型
     with st.chat_message("assistant"):
         with st.spinner("讲师正在深度拆解代码，请稍候..."):
-            response = client.chat.completions.create(
-                model="deepseek-chat", # 建议用 chat 模型，reasoner 可能会啰嗦
-                messages=st.session_state.messages,
-                temperature=0.4 # 稍微给点温度，让比喻更生动
-            )
-            reply = response.choices[0].message.content
-            
-            # 3. 流式输出展示结果 (打字机效果)
-            st.markdown(reply)
-    
-    # 4. 记录 AI 的回答
-    st.session_state.messages.append({"role": "assistant", "content": reply})
+            try:
+                response = client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=st.session_state.messages,
+                    temperature=0.4
+                )
+                reply = response.choices[0].message.content
+                st.markdown(reply)
+                
+                # 记录 AI 回答
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+            except Exception as e:
+                st.error(f"❌ 调用 AI 失败，错误信息: {e}")
