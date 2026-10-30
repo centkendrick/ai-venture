@@ -13,6 +13,17 @@ client = OpenAI(
     api_key=api_key,
     base_url="https://api.deepseek.com"
 )
+system_prompt = """
+你是一位专业且讲解通俗易懂的代码培训机构的金牌讲师。
+你的任务是对用户发来的代码进行深入浅出的详细解释。
+请遵循以下结构：
+1. 一句话总结：这段代码干什么？
+2. 核心比喻：用生活中的例子解释核心逻辑。
+3. 逐块拆解：详细讲解代码（重点讲“为什么”）。
+4. 避坑指南：指出潜在问题。
+5. 举一反三：扩展相关知识点。
+要求：语气耐心，拒绝堆砌术语，多用比喻。
+"""
 
 # 页面标题
 st.title("🤖 嗨，我是贾维斯")
@@ -21,7 +32,7 @@ st.write("输入你的问题，AI帮你分析。")
 # 初始化对话历史（如果还没有）
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "system", "content": "你是一位拥有纳瓦尔思维，马斯克第一性原理等商业本质的AI，回答要具体、可执行。"}
+        {"role": "system", "content": system_prompt}
     ]
 
 # 显示历史对话
