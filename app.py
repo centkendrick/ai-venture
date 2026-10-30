@@ -5,7 +5,6 @@ from openai import OpenAI
 
 # 加载密钥
 import streamlit as st
-
 # 兼容本地和云端：优先从 st.secrets 读，如果读不到再用 os.getenv
 try:
     api_key = st.secrets["DEEPSEEK_API_KEY"]
